@@ -1,49 +1,30 @@
-import random
-import requests
+import random import time from instagrapi import Client from utils import create_account, save_account_to_file from proxy_manager import load_proxies, get_random_proxy, get_proxy_dict
 
-# ملف فيه قائمة بروكسيات، سطر لكل بروكسي بصيغة ip:port أو user:pass@ip:port
-PROXY_LIST_FILE = "proxies.txt"
+تحميل البروكسيات
 
-def load_proxies():
-    with open(PROXY_LIST_FILE, "r") as f:
-        proxies = [line.strip() for line in f if line.strip()]
-    return proxies
+proxies = load_proxies()
 
-def get_random_proxy():
-    proxies = load_proxies()
-    proxy = random.choice(proxies)
-    return format_proxy(proxy)
+عدد الحسابات المراد إنشاؤها
 
-def format_proxy(proxy_str):
-    if "@" in proxy_str:
-        # With authentication
-        auth, ip_port = proxy_str.split("@")
-        user, pwd = auth.split(":")
-        ip, port = ip_port.split(":")
-        return {
-            "http": f"http://{user}:{pwd}@{ip}:{port}",
-            "https": f"http://{user}:{pwd}@{ip}:{port}"
-        }
-    else:
-        ip, port = proxy_str.split(":")
-        return {
-            "http": f"http://{ip}:{port}",
-            "https": f"http://{ip}:{port}"
-        }
+NUM_ACCOUNTS = 5
 
-def test_proxy(proxy):
-    try:
-        r = requests.get("http://ip-api.com/json", proxies=proxy, timeout=5)
-        if r.status_code == 200:
-            print("[+] بروكسي صالح:", r.json()["query"])
-            return True
-    except:
-        pass
-    return False
+for i in range(NUM_ACCOUNTS): proxy = get_random_proxy(proxies) proxy_dict = get_proxy_dict(proxy)
 
-if __name__ == "__main__":
-    proxy = get_random_proxy()
-    if test_proxy(proxy):
-        print("البروكسي جاهز للاستخدام")
-    else:
-        print("فشل في الاتصال بالبروكسي")
+print(f"[*] استخدام البروكسي: {proxy}")
+
+try:
+    # إنشاء حساب جديد
+    username, password, email = create_account()
+
+    cl = Client()
+    cl.set_proxy(proxy_dict)
+    cl.login(username, password)
+
+    print(f"[+] تم تسجيل الدخول بالحساب: {username}")
+    save_account_to_file(username, password, email)
+
+    time.sleep(random.uniform(5, 10))  # تأخير عشوائي بين الحسابات
+
+except Exception as e:
+    print(f"[!] فشل إنشاء الحساب أو تسجيل الدخول: {e}")
+
