@@ -1,28 +1,44 @@
-main.py
+from account_generator import generate_account
+from proxy_manager import get_random_proxy, set_proxy
+from instagrapi import Client
+import time
+import random
 
-from accounts_generator import create_fake_account from vpn_proxy import rotate_proxy from logger import log_action from instagrapi import Client import time, random
+# تحميل الأهداف من ملف
+def load_targets():
+    with open("targets.txt", "r") as f:
+        return [line.strip() for line in f.readlines() if line.strip()]
 
-accounts_to_report = [ ("target_account1", 1), ("target_account2", 2), ]
+# تنفيذ البلاغات
+def report_targets(cl, targets):
+    for username in targets:
+        try:
+            user_id = cl.user_id_from_username(username)
+            cl.user_report(user_id, "This account is posting inappropriate content.")
+            print(f"[✔] تم إرسال بلاغ على: {username}")
+            time.sleep(random.uniform(5, 15))  # تأخير عشوائي
+        except Exception as e:
+            print(f"[!] فشل بلاغ على {username}: {e}")
 
-def report_with_fake_account(): for _ in range(3):  # توليد 3 حسابات وهمية بشكل افتراضي email, username, password = create_fake_account() rotate_proxy()  # تبديل البروكسي قبل كل محاولة
+def run():
+    targets = load_targets()
 
-cl = Client()
+    # توليد حساب وهمي مع بريد
+    account = generate_account()
+
+    # إعداد البروكسي
+    proxy = get_random_proxy()
+    if proxy:
+        set_proxy(proxy)
+
+    # تسجيل الدخول
+    cl = Client()
     try:
-        cl.set_proxy("http://127.0.0.1:PORT")  # يتم الضبط تلقائياً في vpn_proxy.py
-        cl.login(username, password)
-        log_action("LOGIN_SUCCESS", username)
-
-        for target, level in accounts_to_report:
-            try:
-                user_id = cl.user_id_from_username(target)
-                cl.user_report(user_id, reason="It's inappropriate")
-                log_action("REPORTED", f"{target} by {username}")
-                time.sleep(random.uniform(10, 30))
-            except Exception as e:
-                log_action("REPORT_FAILED", str(e))
-
+        cl.login(account["username"], account["password"])
+        print(f"[+] تسجيل الدخول بـ: {account['username']}")
+        report_targets(cl, targets)
     except Exception as e:
-        log_action("LOGIN_FAILED", str(e))
+        print(f"[!] فشل تسجيل الدخول: {e}")
 
-if name == "main": report_with_fake_account()
-
+if __name__ == "__main__":
+    run()
